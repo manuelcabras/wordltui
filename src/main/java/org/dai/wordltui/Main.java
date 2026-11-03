@@ -1,5 +1,6 @@
 package org.dai.wordltui;
 
+import org.dai.wordltui.server.WordleServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -48,6 +49,10 @@ public class Main implements Runnable {
         @Override
         public Integer call() throws Exception {
             System.out.println("Listening on port " + port);
+            WordleServer s = new WordleServer();
+            String wordToGuess = s.startGame();
+            System.out.println("Word to guess: " + wordToGuess);
+            System.out.println("Test guess:\n" + s.handleGuess("aa" + wordToGuess.substring(2)));
             return 0;
         }
     }
