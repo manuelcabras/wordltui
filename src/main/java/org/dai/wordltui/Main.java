@@ -1,17 +1,60 @@
 package org.dai.wordltui;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    static void main() {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        IO.println(String.format("Hello and welcome!"));
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            IO.println("i = " + i);
+import java.util.concurrent.Callable;
+
+@Command(name = "wordlTUI",
+        mixinStandardHelpOptions = true,
+        version = "wordlTUI 1.0",
+        description = "Play Wordle in you terminle",
+        subcommands = {Main.Client.class, Main.Server.class})
+public class Main implements Runnable {
+
+    /**
+     * The default port for the application.
+     */
+    private final static int DEFAULT_PORT = 42069;
+
+    @Override
+    public void run() {
+        // Invoked when no subcommand is given: show usage instead of doing nothing.
+        new CommandLine(this).usage(System.out);
+    }
+
+    @Command(name = "client", mixinStandardHelpOptions = true, version = "wordlTUI 1.0",
+            description = "Launches a client for wordlTUI")
+    static class Client implements Callable<Integer> {
+
+        @Option(names = {"-p", "--port"}, description = "The port to send a connection request to.")
+        private int port = DEFAULT_PORT;
+
+        @Override
+        public Integer call() throws Exception {
+            System.out.println("Connecting to port " + port);
+            return 0;
         }
     }
+
+    @Command(name = "server", mixinStandardHelpOptions = true, version = "wordlTUI 1.0",
+            description = "Launches a wordlTUI server")
+    static class Server implements Callable<Integer> {
+
+        @Option(names = {"-p", "--port"}, description = "The port to listen for connections on.")
+        private int port = DEFAULT_PORT;
+
+        @Override
+        public Integer call() throws Exception {
+            System.out.println("Listening on port " + port);
+            return 0;
+        }
+    }
+
+    public static void main(String... args) {
+        int exitCode = new CommandLine(new Main()).execute(args);
+        System.exit(exitCode);
+    }
+
 }
