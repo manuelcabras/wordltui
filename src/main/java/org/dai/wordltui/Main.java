@@ -52,7 +52,7 @@ public class Main implements Runnable {
             WordleServer s = new WordleServer();
             String wordToGuess = s.startGame();
             System.out.println("Word to guess: " + wordToGuess);
-            System.out.println("Test guess:\n" + s.handleGuess("aa" + wordToGuess.substring(2)));
+            System.out.println("Test guess:\n" + s.handleGuess("snore"));
             return 0;
         }
     }
