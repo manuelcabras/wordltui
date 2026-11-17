@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WordleServer {
 
@@ -13,38 +14,43 @@ public class WordleServer {
     private final int MAX_ATTEMPTS = 6;
 
     /**
+     * The length of words in the dictionary.
+     */
+    private int letterCount;
+
+    /**
      * A collection of words to choose from.
      *
      * All words must be of the same length.
      */
-    private static ArrayList<String> dictionary = new ArrayList<>();
+    private static final ArrayList<String> dictionary = new ArrayList<String>();
 
     /**
-     * The word to guess.
+     * The word to guess. Keyed by client.
      */
-    private String wordToGuess;
+    private final ConcurrentHashMap<String, String> wordToGuess = new ConcurrentHashMap<>();
 
     /**
-     * The guessed characters that are not in the word.
+     * The guessed characters that are not in the word. Keyed by client.
      */
-    private ArrayList<Character> wrongChars = new ArrayList<>();
+    private final ConcurrentHashMap<String, ArrayList<Character>> wrongChars = new ConcurrentHashMap<>();
 
     /**
-     * The guessed characters that are in the word but not in the right position.
+     * The guessed characters that are in the word but not in the right position. Keyed by client.
      */
-    private ArrayList<Character> containedChars = new ArrayList<>();
+    private final ConcurrentHashMap<String, ArrayList<Character>> containedChars = new ConcurrentHashMap<>();
 
     /**
-     * The correctly guessed chars
+     * The correctly guessed chars. Keyed by client.
      *
      * Chars that have not been guessed are spaces (== ' ')
      */
-    private char[] correctChars;
+    private final ConcurrentHashMap<String, char[]> correctChars = new ConcurrentHashMap<>();
 
     /**
-     * The amount of attempts for the current game.
+     * The amount of attempts for the current game. Keyed by client.
      */
-    private int attempts;
+    private final ConcurrentHashMap<String, Integer> attempts = new ConcurrentHashMap<>();
 
     /**
      * Constructs a Server instance.
@@ -59,7 +65,6 @@ public class WordleServer {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(new FileInputStream(pathToWords), StandardCharsets.UTF_8))) {
 
-            dictionary = new ArrayList<String>();
             String line;
             while((line = reader.readLine()) != null) {
                 if (line.length() != letterCount) {
@@ -73,8 +78,7 @@ public class WordleServer {
             throw new RuntimeException("The file you just submitted does not exist");
         }
 
-        this.correctChars = new char[letterCount];
-        Arrays.fill(this.correctChars, ' ');
+        this.letterCount = letterCount;
     }
 
     /**
@@ -93,10 +97,14 @@ public class WordleServer {
      * @return
      *   The new word to guess.
      */
-    public String startGame() {
-        wordToGuess = dictionary.get((int) (Math.random() * dictionary.size()));
-        attempts = 0;
-        return wordToGuess;
+    public String startGame(String clientName) {
+        wordToGuess.put(clientName, dictionary.get((int) (Math.random() * dictionary.size())));
+        attempts.put(clientName, 0);
+        wrongChars.put(clientName, new ArrayList<>());
+        containedChars.put(clientName, new ArrayList<>());
+        correctChars.put(clientName, new char[letterCount]);
+        Arrays.fill(correctChars.get(clientName), ' ');
+        return wordToGuess.get(clientName);
     }
 
     /**
@@ -108,9 +116,9 @@ public class WordleServer {
      * @return
      *   A character contained in the word or ' ' if none can be given.
      */
-    public char handleHint(boolean consonant) {
-        for(char c : wordToGuess.toCharArray()) {
-            if (containedChars.contains(c)) {
+    public char handleHint(boolean consonant, String clientName) {
+        for(char c : wordToGuess.get(clientName).toCharArray()) {
+            if (containedChars.get(clientName).contains(c)) {
                 continue;
             }
 
@@ -122,7 +130,7 @@ public class WordleServer {
                 continue;
             }
 
-            containedChars.add(c);
+            containedChars.get(clientName).add(c);
             return c;
         }
 
@@ -138,35 +146,37 @@ public class WordleServer {
      * @return
      *   The full response string after a guess.
      */
-    public String handleGuess(String guess) {
-        attempts++;
-        if (guess.equals(wordToGuess)) {
-            return "win: " + wordToGuess;
+    public String handleGuess(String guess, String clientName) {
+        String targetWord = wordToGuess.get(clientName);
+        attempts.put(clientName, attempts.get(clientName) + 1);
+        int attemptNumber = attempts.get(clientName);
+        if (guess.equals(targetWord)) {
+            return "win: " + targetWord;
         }
 
-        if(attempts >= MAX_ATTEMPTS) {
-            return "lose: " + wordToGuess;
+        if(attemptNumber >= MAX_ATTEMPTS) {
+            return "lose: " + targetWord;
         }
 
         for(int i = 0; i < guess.length(); i++) {
             char c = guess.charAt(i);
 
-            switch(isInWord(c, wordToGuess, i)) {
+            switch(isInWord(c, targetWord, i)) {
                 case -1:
-                    wrongChars.add(c);
+                    wrongChars.get(clientName).add(c);
                     break;
                 case 0:
-                    containedChars.add(c);
+                    containedChars.get(clientName).add(c);
                     break;
                 case 1:
-                    correctChars[i] = c;
+                    correctChars.get(clientName)[i] = c;
             }
         }
 
-        return  "correctChars: " + Arrays.toString(correctChars) +
-                "\nwrongChars: " + wrongChars.toString() +
-                "\ncontainedChars: " + containedChars.toString() +
-                "\nattempts left: " + (MAX_ATTEMPTS - attempts);
+        return  "correctChars: " + Arrays.toString(correctChars.get(clientName)) +
+                "\nwrongChars: " + wrongChars.get(clientName).toString() +
+                "\ncontainedChars: " + containedChars.get(clientName).toString() +
+                "\nattempts left: " + (MAX_ATTEMPTS - attemptNumber);
     }
 
     /**
