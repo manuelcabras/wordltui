@@ -68,7 +68,8 @@ public class WordleServer {
             String line;
             while((line = reader.readLine()) != null) {
                 if (line.length() != letterCount) {
-                    throw new IOException("Some words don't respect the given " + letterCount + " letter length");
+                    System.out.println("[Skipped] Word" + line + " does not respect the given " + letterCount + " letter length");
+                    continue;
                 }
 
                 dictionary.add(line);
@@ -150,7 +151,7 @@ public class WordleServer {
         String targetWord = wordToGuess.get(clientName);
         attempts.put(clientName, attempts.get(clientName) + 1);
         int attemptNumber = attempts.get(clientName);
-        if (guess.equals(targetWord)) {
+        if (guess.equalsIgnoreCase(targetWord)) {
             return "win: " + targetWord;
         }
 
@@ -215,11 +216,7 @@ public class WordleServer {
             return -1;
         }
 
-        if (c == s.charAt(index)) {
-            return 1;
-        }
-
-        return 0;
+        return c == s.charAt(index) ? 1 : 0;
     }
 
     /**
