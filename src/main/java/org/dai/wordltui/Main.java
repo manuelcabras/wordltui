@@ -48,11 +48,12 @@ public class Main implements Runnable {
 
         @Override
         public Integer call() throws Exception {
+            String clientName = "Test";
             System.out.println("Listening on port " + port);
             WordleServer s = new WordleServer();
-            String wordToGuess = s.startGame();
+            String wordToGuess = s.startGame(clientName);
             System.out.println("Word to guess: " + wordToGuess);
-            System.out.println("Test guess:\n" + s.handleGuess("snore"));
+            System.out.println("Test guess:\n" + s.handleGuess("snore", clientName));
             return 0;
         }
     }
