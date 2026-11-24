@@ -1,57 +1,18 @@
-## Game display
-```
-_____________________
-|   | S |   |   | E |
-=====================
-eliminated letters : ADFX
-guessed, wrong position : BCP
-remaining attempts : 3
+# WordlTUI
 
-Answer with :
-GUESS [word]
-HINT [V/C]
-```
+A Wordl alternative to play whenever you want
 
-## Commands
+## Build and publish
 
-> general commands
+> [!NOTE]
+> To push to the Github Registry, you need a PAT Token with at least `packages:write` permission. [Click here to obtain yours](https://github.com/settings/tokens/new) 
 
-S : WELCOME - HELP FOR COMMANDS
+### Easy way 
+1. Copy .env.example as .env and fill the personal access token obtained by github as well as your username 
+2. run `chmod +x docker-deploy.sh && ./docker-deploy.sh` from the root of this repo
 
-C : PLAY : start a game
+### Manual way
+- Run the image build : `docker image build -t ghcr.io/[username]/wordltui-java-jar:latest .`
+- Login to the docker registry : `docker login ghcr.io -u [username] --password-stdin [pat_token]`
+- Push the image to the registry : `docker push ghcr.io/[username]/wordltui-java-jar:latest`
 
-C: QUIT
-S: BYE
-
-C: HELP
-S: 
-PLAY 
-QUIT
-HINT []
-GUESS []
-etc
-
-C : HIGHSCORE [word]
-S : if word -> highscore; else "no highscore for this word"
-
-> game commands
-
-C : HINT : ask a hint once
-    S  : vowel or consonant
-    C: V / C
-    S: [letter]
-
-C : GUESS [word]
-S : main interface
-
-C: FF // GIVEUP
-S: YOU LOST THE GAME. WORD WAS [XXXX]
-
-##  CODES :
-200 : ok
-
-## Error types :
-- Game commands outside a game
-- Guess invalid input (not a word, outside of dictionary etc.) 
-- ask for hint twice
-- invalid command / parameter
