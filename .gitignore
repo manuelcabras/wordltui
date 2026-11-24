@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 .kotlin
 mvnw.cmd
+.env
 
 ### IntelliJ IDEA ###
 .idea/
