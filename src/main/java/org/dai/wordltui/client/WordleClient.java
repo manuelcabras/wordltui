@@ -14,8 +14,7 @@ public class WordleClient {
     /**
      * Constructs a client instance.
      */
-    public WordleClient() {
-    }
+    public WordleClient() {}
 
     /**
      * Builds a failed attempt string.
@@ -81,7 +80,7 @@ public class WordleClient {
             String input;
             String output;
             System.out.print("> ");
-            while ((input = commands.readLine()) != "QUIT") {
+            while ((input = commands.readLine()) != null && !input.equals("QUIT")) {
                 out.write(input);
                 out.flush();
                 if ((output = in.readLine()) != null) {

@@ -6,9 +6,8 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class WordleServer {
 
@@ -56,6 +55,11 @@ public class WordleServer {
      * The amount of attempts for the current game. Keyed by client.
      */
     private final ConcurrentHashMap<String, Integer> attempts = new ConcurrentHashMap<>();
+
+    /**
+     * The amount of points attributed to each 
+     */
+    private static final ConcurrentHashMap<String,ConcurrentHashMap<String, Integer>> highscores = new ConcurrentHashMap<>();
 
     /**
      * Constructs a Server instance.
@@ -246,10 +250,75 @@ public class WordleServer {
                 BufferedWriter out = new BufferedWriter(
                         new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
             String input;
+            String username;
+            AtomicInteger hints = new AtomicInteger(0);
             out.write(
                     "Welcome to Wordle ! Guess a random 5 letter word as fast and in the least amount of tries as possible\n");
             out.write("\n");
+            out.write("Choose a username\n");
             out.flush();
+            while((username = in.readLine()) == null){
+                out.write("Invalid username, please insert a username \n");
+                out.flush();
+            };
+            String wordtoguess = startGame(username);
+            while((input = in.readLine()) != null && !input.equals("GIVEUP")){
+                switch(input){
+                    case "HELP" -> {out.write("------------------------------------------- Game commands -------------------------------------------\n");
+                                    out.write("GUESS <word>     : Guess a word\n");
+                                    out.write("GIVEUP           : You give up and instantly loose the game, the correct word is revealed\n");
+                                    out.write("HINT             : ask for a hint (you've the right to ask ONE hint per game, so make good use of it)\n");
+                                    out.write("   => VOWEL      : Gives you a vowel from the correct word (if it contains any)\n");
+                                    out.write("   => CONSONANT  : Gives you a consonant from the correct word (if it contains any)\n");
+                                    out.flush();
+                    }
+                    case "HINT" -> {
+                        while((input = in.readLine()) != null){
+                            if (hints.get() < 1){
+                                switch(input){
+                                    case "VOWEL" -> { 
+                                        if(handleHint(false, username) == ' '){
+                                            out.write("There are no vowels in this word\n");
+                                            out.flush();
+                                        }else{
+                                            out.write("=> " + String.valueOf(handleHint(false, username)) + "\n");
+                                            out.flush();
+                                        }
+
+                                    }
+                                    case "CONSONANT" -> { 
+                                        if(handleHint(true, username) == ' '){
+                                            out.write("There are no consonants in this word\n");
+                                            out.flush();
+                                        }else{
+                                            out.write("=> " + String.valueOf(handleHint(true, username)) + "\n");
+                                            out.flush();
+                                        }
+
+                                    } 
+                                }
+                            }else{
+                                out.write("You've already wasted your only hint for this game\n");
+                                out.flush();
+                            }
+                            
+                        }
+                    }
+                    case "GIVEUP" -> {out.write("YOU LOST THE GAME. THE CORRECT WORD WAS " + wordtoguess + "\n");
+                                      out.flush();
+                    }
+                    default -> {
+                        if(input.contains("GUESS")){
+                            String guess = input.contains(" ") ? input.substring(input.indexOf(" "), input.length()) : null;
+                            out.write(handleGuess(guess, username));
+                            out.flush();
+                        }else{
+                            out.write("Invalid command, type HELP to see all the game commands\n");
+                            out.flush();
+                        }
+                    }
+                }
+            }
         } catch (IOException e) {
             throw new IOException("[Server] Client connexion failed abruptly, " + e.getMessage());
         }
@@ -264,12 +333,10 @@ public class WordleServer {
             String input;
             out.write("WELCOME [HELP FOR COMMANDS]\n");
             out.flush();
-            while ((input = in.readLine()) != "QUIT") {
+            while ((input = in.readLine()) != null && !input.equals("QUIT")) {  
                 switch (input) {
-                    case "PLAY":
-                        playgame(client);
-                        break;
-                    case "HELP":
+                    case "PLAY"-> playgame(client);
+                    case "HELP" ->{
                         out.write(
                                 "----------------------------------- General commands -----------------------------------\n");
                         out.write("HIGHSCORE        : Gives the best score over all games played\n");
@@ -279,19 +346,16 @@ public class WordleServer {
                         out.write("QUIT             : Close the connection with the server\n");
                         out.write("\n");
                         out.flush();
-                        break;
-
-                    case "GUESS":
-                    case "HINT":
-                    case "GIVEUP":
+                    }
+                    case "GUESS", "HINT","GIVEUP" ->{
                         out.write("This command is only valid during a game, start one in order to use them\n");
                         out.flush();
-                        break;
-                    default:
+                    }
+                    default ->{
                         out.write("Invalid command\n");
                         out.write("\n");
                         out.flush();
-                        break;
+                    }
                 }
             }
             out.write("Connection closed : BYE\n");
