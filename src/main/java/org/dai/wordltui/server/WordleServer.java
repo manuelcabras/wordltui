@@ -239,6 +239,22 @@ public class WordleServer {
         return "AEIOUYaeiouy".indexOf(c) != -1;
     }
 
+    private void playgame(Socket s) throws IOException {
+        try (Socket client = s;
+                BufferedReader in = new BufferedReader(
+                        new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+                BufferedWriter out = new BufferedWriter(
+                        new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
+            String input;
+            out.write(
+                    "Welcome to Wordle ! Guess a random 5 letter word as fast and in the least amount of tries as possible\n");
+            out.write("\n");
+            out.flush();
+        } catch (IOException e) {
+            throw new IOException("[Server] Client connexion failed abruptly, " + e.getMessage());
+        }
+    }
+
     private void handle(Socket s) throws IOException {
         try (Socket client = s;
                 BufferedReader in = new BufferedReader(
@@ -251,20 +267,26 @@ public class WordleServer {
             while ((input = in.readLine()) != "QUIT") {
                 switch (input) {
                     case "PLAY":
-
+                        playgame(client);
                         break;
                     case "HELP":
-                        out.write("--- General commands ---\n");
-                        out.write("HIGHSCORE : Gives the best score over all games played\n");
-                        out.write("HIGHSCORE <word> : Gives the best score for a given word\n");
-                        out.write("PLAY : Start a game of Wordle\n");
-                        out.write("QUIT : Close the connection with the server\n");
-                        out.write("\n--- Game commands ---\n");
-
+                        out.write(
+                                "----------------------------------- General commands -----------------------------------\n");
+                        out.write("HIGHSCORE        : Gives the best score over all games played\n");
+                        out.write(
+                                "HIGHSCORE <word> : Gives the best score for a given word if it's ever been registered\n");
+                        out.write("PLAY             : Start a game of Wordle\n");
+                        out.write("QUIT             : Close the connection with the server\n");
                         out.write("\n");
-
+                        out.flush();
                         break;
 
+                    case "GUESS":
+                    case "HINT":
+                    case "GIVEUP":
+                        out.write("This command is only valid during a game, start one in order to use them\n");
+                        out.flush();
+                        break;
                     default:
                         out.write("Invalid command\n");
                         out.write("\n");
