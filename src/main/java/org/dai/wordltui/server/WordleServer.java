@@ -220,8 +220,9 @@ public class WordleServer {
      * @return
      *         The calculated score.
      */
-    public int calculateHighscore(int attempts, int duration) {
-        return duration * 100 / attempts;
+    public int calculateHighscore(int attempts, int duration, int hints) {
+        AtomicInteger initialscore = new AtomicInteger(100000 / (duration/1000)* attempts);
+        return (hints > 0 ? initialscore.get() : initialscore.get() - initialscore.get()/4);
     }
 
     /**
@@ -292,33 +293,31 @@ public class WordleServer {
                                     out.flush();
                     }
                     case "HINT" -> {
-                            if (hints.getAndIncrement() < 1){
-                                switch(input){
-                                    case "VOWEL" -> { 
-                                        if(handleHint(false, username) == ' '){
-                                            out.write("There are no vowels in this word\n");
-                                            out.flush();
-                                        }else{
-                                            out.write("=> " + String.valueOf(handleHint(false, username)) + "\n");
-                                            out.flush();
-                                        }
-
+                        out.write("Choose between a vowel and a consonant from the correct word\n");
+                        out.flush();
+                        String hintType;
+                        if ((hintType= in.readLine()) == null) {
+                            return;
+                        }
+                        if (hints.get() >= 1) {
+                            out.write("You've already wasted your only hint for this game\n");
+                        } else {
+                            switch (hintType) {
+                                case "VOWEL", "CONSONANT" -> {
+                                    boolean consonant = hintType.equals("CONSONANT");
+                                    char hint = handleHint(consonant, username);
+                                    hints.incrementAndGet();
+                                    if (hint == ' ') {
+                                        out.write("There are no " + (consonant ? "consonants" : "vowels")
+                                                + " in this word\n");
+                                    } else {
+                                        out.write("=> " + hint + "\n");
                                     }
-                                    case "CONSONANT" -> { 
-                                        if(handleHint(true, username) == ' '){
-                                            out.write("There are no consonants in this word\n");
-                                            out.flush();
-                                        }else{
-                                            out.write("=> " + String.valueOf(handleHint(true, username)) + "\n");
-                                            out.flush();
-                                        }
-
-                                    } 
                                 }
-                            }else{
-                                out.write("You've already wasted your only hint for this game\n");
-                                out.flush();
+                                default -> out.write("Invalid hint type; choose VOWEL or CONSONANT\n");
                             }
+                        }
+                        out.flush();
                     }
                     case "GIVEUP" -> {
                         out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
@@ -337,7 +336,7 @@ public class WordleServer {
                             String line;
                             switch(line = handleGuess(guess,username)){
                                 case "Won" -> { int duration = (int) ((System.nanoTime() - startTime) / 1_000_000L); // in milliseconds
-                                                AtomicInteger score = new AtomicInteger(calculateHighscore(attempts.get(),duration));
+                                                AtomicInteger score = new AtomicInteger(calculateHighscore(attempts.get(),duration,hints.get()));
                                                 out.write("You've won, you're score is + " + score + "\n");
                                                 out.flush();
                                                 HighScore best = new HighScore(username,score.get());
