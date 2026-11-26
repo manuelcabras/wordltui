@@ -259,93 +259,102 @@ public class WordleServer {
     }
 
     private void playgame(BufferedReader in, BufferedWriter out) throws IOException {
-        out.write(
-                "Welcome to Wordle ! Guess a random 5 letter word as fast and in the least amount of tries as possible\n");
-        out.write("\n");
-        out.write("Choose a username\n");
-        out.flush();
-
-        String username = in.readLine();
-        if (username == null) {
-            return;
-        }
-
-        String wordtoguess = startGame(username);
-        long startTime = System.nanoTime();
-        int hintsUsed = 0;
-        String input;
-
-        while ((input = in.readLine()) != null) {
-            switch (input) {
-                case "HELP" -> {
-                    out.write("------------------------------------------- Game commands -------------------------------------------\n");
-                    out.write("GUESS <word>     : Guess a word\n");
-                    out.write("GIVEUP           : You give up and instantly loose the game, the correct word is revealed\n");
-                    out.write("HINT             : ask for a hint (you've the right to ask ONE hint per game, so make good use of it)\n");
-                    out.write("   => VOWEL      : Gives you a vowel from the correct word (if it contains any)\n");
-                    out.write("   => CONSONANT  : Gives you a consonant from the correct word (if it contains any)\n");
-                    out.flush();
-                }
-                case "HINT" -> {
-                    String hintType = in.readLine();
-                    if (hintType == null) {
-                        return;
+        try {
+            String input;
+            String username;
+            AtomicInteger hints = new AtomicInteger(0);
+            AtomicInteger attempts = new AtomicInteger(0);
+            long startTime = System.nanoTime(); //in nanoseconds
+            out.write(
+                    "Welcome to Wordle ! Guess a random 5 letter word as fast and in the least amount of tries as possible\n");
+            out.write("\n");
+            out.write("Choose a username\n");
+            out.flush();
+            while((username = in.readLine()) == null){
+                out.write("Invalid username, please insert a username \n");
+                out.flush();
+            };
+            out.write("The game is on ! Good luck\n");
+            out.flush();
+            String wordtoguess = startGame(username);
+            while((input = in.readLine()) != null){
+                switch(input){
+                    case "HELP" -> {out.write("------------------------------------------- Game commands -------------------------------------------\n");
+                                    out.write("GUESS <word>     : Guess a word\n");
+                                    out.write("GIVEUP           : You give up and instantly loose the game, the correct word is revealed\n");
+                                    out.write("HINT             : ask for a hint (you've the right to ask ONE hint per game, so make good use of it)\n");
+                                    out.write("   => VOWEL      : Gives you a vowel from the correct word (if it contains any)\n");
+                                    out.write("   => CONSONANT  : Gives you a consonant from the correct word (if it contains any)\n");
+                                    out.flush();
                     }
-                    if (hintsUsed > 0) {
-                        out.write("You've already wasted your only hint for this game\n");
-                    } else if (hintType.equals("VOWEL") || hintType.equals("CONSONANT")) {
-                        hintsUsed++;
-                        boolean consonant = hintType.equals("CONSONANT");
-                        char hint = handleHint(consonant, username);
-                        out.write(hint == ' '
-                                ? "There are no " + (consonant ? "consonants" : "vowels") + " in this word\n"
-                                : "=> " + hint + "\n");
-                    } else {
-                        out.write("Invalid hint type; choose VOWEL or CONSONANT\n");
+                    case "HINT" -> {
+                            if (hints.getAndIncrement() < 1){
+                                switch(input){
+                                    case "VOWEL" -> { 
+                                        if(handleHint(false, username) == ' '){
+                                            out.write("There are no vowels in this word\n");
+                                            out.flush();
+                                        }else{
+                                            out.write("=> " + String.valueOf(handleHint(false, username)) + "\n");
+                                            out.flush();
+                                        }
+
+                                    }
+                                    case "CONSONANT" -> { 
+                                        if(handleHint(true, username) == ' '){
+                                            out.write("There are no consonants in this word\n");
+                                            out.flush();
+                                        }else{
+                                            out.write("=> " + String.valueOf(handleHint(true, username)) + "\n");
+                                            out.flush();
+                                        }
+
+                                    } 
+                                }
+                            }else{
+                                out.write("You've already wasted your only hint for this game\n");
+                                out.flush();
+                            }
                     }
-                    out.flush();
-                }
-                case "GIVEUP" -> {
-                    out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
-                    out.flush();
-                    return;
-                }
-                case "QUIT" -> {
-                    return;
-                }
-                default -> {
-                    if (input.startsWith("GUESS ")) {
-                        int gameAttempts = attempts.get(username);
-                        String guess = input.substring("GUESS ".length()).trim();
-                        String result = handleGuess(guess, username);
-                        switch (result) {
-                            case "Won" -> {
-                                int duration = (int) ((System.nanoTime() - startTime) / 1_000_000L);
-                                int score = calculateHighscore(gameAttempts + 1, duration);
-                                out.write("You've won, your score is + " + score + "\n");
-                                out.flush();
-                                highscores.compute(wordtoguess, (word, best) ->
-                                        best == null || score > best.points()
-                                                ? new HighScore(username, score)
-                                                : best);
-                                return;
-                            }
-                            case "Lost" -> {
-                                out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
-                                out.flush();
-                                return;
-                            }
-                            default -> {
-                                out.write(result + "\n\n");
-                                out.flush();
-                            }
+                    case "GIVEUP" -> {out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
+                                      out.flush();
+                                      break;
+                    }
+                    default -> {
+                        if(input.contains("GUESS")){
+                            attempts.incrementAndGet();
+                            String guess = input.contains(" ") ? input.substring(input.indexOf(" ")+1, input.length()) : null;
+                            String line;
+                            switch(line = handleGuess(guess,username)){
+                                case "Won" -> { int duration = (int) ((System.nanoTime() - startTime) / 1_000_000L); // in milliseconds
+                                                AtomicInteger score = new AtomicInteger(calculateHighscore(attempts.get(),duration));
+                                                out.write("You've won, you're score is + " + score + "\n");
+                                                out.flush();
+                                                HighScore best = new HighScore(username,score.get());
+                                                if(highscores.containsKey(wordtoguess) && highscores.get(wordtoguess).points() < score.get()){
+                                                    highscores.remove(wordtoguess);
+                                                    highscores.put(wordtoguess, best);
+                                                }else{
+                                                    highscores.put(wordtoguess, best);
+                                                }
+                                }
+                                case "Lost" -> { out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
+                                                 out.flush();
+                                } 
+                                default -> { out.write(line + "\n");
+                                            out.write("\n");
+                                             out.flush();
+                                }
+                            }           
+                        }else{
+                            out.write("Invalid command, type HELP to see all the game commands\n");
+                            out.flush();
                         }
-                    } else {
-                        out.write("Invalid command, type HELP to see all the game commands\n");
-                        out.flush();
-                    }
                 }
             }
+        }
+        } catch (IOException e) {
+            throw new IOException("[Server] Client connexion failed abruptly, " + e.getMessage());
         }
     }
 
@@ -360,7 +369,7 @@ public class WordleServer {
             out.flush();
             while ((input = in.readLine()) != null && !input.equals("QUIT")) {  
                 switch (input) {
-                    case "PLAY" -> playgame(in, out);
+                    case "PLAY"-> playgame(in, out);
                     case "HELP" ->{
                         out.write(
                                 "----------------------------------- General commands -----------------------------------\n");

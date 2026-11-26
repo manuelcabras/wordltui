@@ -77,23 +77,41 @@ public class WordleClient {
                         new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
                 BufferedReader commands = new BufferedReader(
                         new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-            String input;
-            String output;
-            System.out.print("> ");
-            while ((input = commands.readLine()) != null && !input.equals("QUIT")) {
-                out.write(input);
-                out.flush();
-                if ((output = in.readLine()) != null) {
-                    System.out.println("> " + output);
-                } else {
-                    throw new IOException(
-                            "[Client] Connexion failed abruptly, the server didn't answer your request\n");
-                }
-                System.out.println("> ");
+            String welcome = in.readLine();
+            if (welcome == null) {
+                throw new IOException("[Client] Server closed the connection before sending its welcome message");
             }
-            out.write("QUIT");
-            out.flush();
-            System.out.println(in.readLine());
+            System.out.println(welcome);
+
+            Thread outputThread = new Thread(() -> {
+                try {
+                    String output;
+                    while ((output = in.readLine()) != null) {
+                        System.out.println(output);
+                    }
+                } catch (IOException e) {
+                    System.err.println("[Client] Failed while reading server output: " + e.getMessage());
+                }
+            }, "wordltui-server-output");
+            outputThread.setDaemon(true);           // from https://www.geeksforgeeks.org/java/daemon-thread-java/
+            outputThread.start();
+
+            String input;
+            while (true) {
+                System.out.print("> ");
+                System.out.flush();
+                input = commands.readLine();
+                if (input == null || input.equals("QUIT")) {
+                    out.write("QUIT");
+                    out.newLine();
+                    out.flush();
+                    break;
+                }
+
+                out.write(input);
+                out.newLine();
+                out.flush();
+            }
         } catch (IOException e) {
             throw new IOException("[Client] Connexion failed abruptly, " + e.getMessage());
         }
