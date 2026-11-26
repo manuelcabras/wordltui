@@ -1,11 +1,13 @@
 package org.dai.wordltui;
 
+import java.util.concurrent.Callable;
+
+import org.dai.wordltui.client.WordleClient;
 import org.dai.wordltui.server.WordleServer;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-
-import java.util.concurrent.Callable;
 
 @Command(name = "wordlTUI",
         mixinStandardHelpOptions = true,
@@ -35,6 +37,7 @@ public class Main implements Runnable {
         @Override
         public Integer call() throws Exception {
             System.out.println("Connecting to port " + port);
+            new WordleClient().openConnection(port);
             return 0;
         }
     }
@@ -48,12 +51,9 @@ public class Main implements Runnable {
 
         @Override
         public Integer call() throws Exception {
-            String clientName = "Test";
             System.out.println("Listening on port " + port);
             WordleServer s = new WordleServer();
-            String wordToGuess = s.startGame(clientName);
-            System.out.println("Word to guess: " + wordToGuess);
-            System.out.println("Test guess:\n" + s.handleGuess("snore", clientName));
+            s.openConnection(port, 10);
             return 0;
         }
     }
