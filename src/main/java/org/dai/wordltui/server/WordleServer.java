@@ -263,22 +263,16 @@ public class WordleServer {
         return "AEIOUYaeiouy".indexOf(c) != -1;
     }
 
-    private void playgame(BufferedReader in, BufferedWriter out) throws IOException {
+    private void playgame(BufferedReader in, BufferedWriter out, String username) throws IOException {
         try {
             String input;
-            String username;
             AtomicInteger hints = new AtomicInteger(0);
             AtomicInteger attempts = new AtomicInteger(0);
             long startTime = System.nanoTime(); //in nanoseconds
             out.write(
                     "Welcome to Wordle ! Guess a random 5 letter word as fast and in the least amount of tries as possible\n");
             out.write("\n");
-            out.write("Choose a username\n");
             out.flush();
-            while((username = in.readLine()) == null){
-                out.write("Invalid username, please insert a username \n");
-                out.flush();
-            };
             out.write("The game is on ! Good luck\n");
             out.flush();
             String wordtoguess = startGame(username);
@@ -371,17 +365,26 @@ public class WordleServer {
     }
 
     private void handle(Socket s) throws IOException {
-        try (Socket client = s;
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
+        try (BufferedReader in = new BufferedReader(
+                    new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
                 BufferedWriter out = new BufferedWriter(
-                        new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
+                    new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
             String input;
             out.write("WELCOME [HELP FOR COMMANDS]\n");
+            out.write("Choose a username\n");
             out.flush();
+            String username = in.readLine();
+            while (username != null && username.isBlank()) {
+                out.write("Username cannot be empty. Choose a username\n");
+                out.flush();
+                username = in.readLine();
+            }
+            if (username == null) {
+                return;
+            }
             while ((input = in.readLine()) != null && !input.equals("QUIT")) {  
                 switch (input) {
-                    case "PLAY"-> playgame(in, out);
+                    case "PLAY"-> playgame(in, out, username);
                     case "HELP" ->{
                         out.write(
                                 "----------------------------------- General commands -----------------------------------\n");
