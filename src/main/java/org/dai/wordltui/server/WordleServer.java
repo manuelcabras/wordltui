@@ -173,6 +173,10 @@ public class WordleServer {
      */
     public String handleGuess(String guess, String clientName) {
         String targetWord = wordToGuess.get(clientName);
+        if (guess == null || guess.length() != targetWord.length()) {
+            return "Invalid guess: enter a word with exactly " + targetWord.length() + " letters";
+        }
+
         attempts.put(clientName, attempts.get(clientName) + 1);
         int attemptNumber = attempts.get(clientName);
         if (guess.equalsIgnoreCase(targetWord)) {
@@ -316,14 +320,20 @@ public class WordleServer {
                                 out.flush();
                             }
                     }
-                    case "GIVEUP" -> {out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
-                                      out.flush();
-                                      break;
+                    case "GIVEUP" -> {
+                        out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
+                        out.flush();
+                        return;
                     }
                     default -> {
                         if(input.contains("GUESS")){
-                            attempts.incrementAndGet();
                             String guess = input.contains(" ") ? input.substring(input.indexOf(" ")+1, input.length()) : null;
+                            if (guess == null || guess.length() != wordtoguess.length()) {
+                                out.write("Invalid guess: enter a word with exactly " + wordtoguess.length() + " letters\n");
+                                out.flush();
+                                continue;
+                            }
+                            attempts.incrementAndGet();
                             String line;
                             switch(line = handleGuess(guess,username)){
                                 case "Won" -> { int duration = (int) ((System.nanoTime() - startTime) / 1_000_000L); // in milliseconds
@@ -337,9 +347,12 @@ public class WordleServer {
                                                 }else{
                                                     highscores.put(wordtoguess, best);
                                                 }
+                                                return;
                                 }
-                                case "Lost" -> { out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
-                                                 out.flush();
+                                case "Lost" -> {
+                                    out.write("You've lost the game. The correct word was : " + wordtoguess + "\n");
+                                    out.flush();
+                                    return;
                                 } 
                                 default -> { out.write(line + "\n");
                                             out.write("\n");
