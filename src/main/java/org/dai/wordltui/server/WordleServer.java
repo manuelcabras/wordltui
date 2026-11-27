@@ -338,7 +338,7 @@ public class WordleServer {
                                                     highscores.remove(wordtoguess);
                                                     highscores.put(wordtoguess, best);
                                                 }else{
-                                                    highscores.put(wordtoguess, best);
+                                                    highscores.putIfAbsent(wordtoguess, best);
                                                 }
                                                 return;
                                 }
