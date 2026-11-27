@@ -83,6 +83,30 @@ public class WordleClient {
             }
             System.out.println(welcome);
 
+            String usernamePrompt = in.readLine();
+            if (usernamePrompt == null) {
+                throw new IOException("[Client] Server closed the connection before requesting a username");
+            }
+            System.out.println(usernamePrompt);
+
+            String username;
+            while (true) {
+                System.out.print("> ");
+                System.out.flush();
+                username = commands.readLine();
+                if (username == null) {
+                    return;
+                }
+                if (!username.isBlank()) {
+                    break;
+                }
+                System.out.println("Username cannot be empty.");
+            }
+            out.write(username);
+            out.newLine();
+            out.flush();
+            System.out.println("Type HELP for commands or PLAY to begin a game of Wordle.");
+
             Thread outputThread = new Thread(() -> {
                 try {
                     String output;
@@ -90,7 +114,7 @@ public class WordleClient {
                         System.out.println(output);
                     }
                 } catch (IOException e) {
-                    System.err.println("[Client] Failed while reading server output: " + e.getMessage());
+                    System.err.println("[Client] Connexion failed abruptly while reading server output: " + e.getMessage());
                 }
             }, "wordltui-server-output");
             outputThread.setDaemon(true);           // from https://www.geeksforgeeks.org/java/daemon-thread-java/
@@ -106,6 +130,9 @@ public class WordleClient {
                     out.newLine();
                     out.flush();
                     break;
+                }
+                if (input.isBlank()) {
+                    continue;
                 }
 
                 out.write(input);

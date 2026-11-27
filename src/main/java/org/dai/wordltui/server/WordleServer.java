@@ -287,15 +287,15 @@ public class WordleServer {
                                     out.flush();
                     }
                     case "HINT" -> {
-                        out.write("Choose between a vowel and a consonant from the correct word\n");
-                        out.flush();
-                        String hintType;
-                        if ((hintType= in.readLine()) == null) {
-                            return;
-                        }
                         if (hints.get() >= 1) {
                             out.write("You've already wasted your only hint for this game\n");
                         } else {
+                            out.write("Choose between a vowel and a consonant from the correct word\n");
+                            out.flush();
+                            String hintType;
+                            if ((hintType= in.readLine()) == null) {
+                                return;
+                            }
                             switch (hintType) {
                                 case "VOWEL", "CONSONANT" -> {
                                     boolean consonant = hintType.equals("CONSONANT");
@@ -418,6 +418,7 @@ public class WordleServer {
                             }else{
                                 out.write("Best score for " + word +" so far: " + best.points() + " points by " + best.username() + "\n");
                             }
+                            out.flush();
                         }else{
                             out.write("Invalid command\n");
                             out.write("\n");
